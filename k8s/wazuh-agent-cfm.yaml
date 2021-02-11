@@ -1,133 +1,12 @@
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: wazuh-agent
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: wazuh-agent
-  namespace: wazuh-agent
-spec:
-  selector:
-    matchLabels:
-      name: wazuh-agent
-  template:
-    metadata:
-      labels:
-        name: wazuh-agent
-    spec:
-      tolerations:
-      - key: node-role.kubernetes.io/master
-        effect: NoSchedule
-      containers:
-      - name: wazuh-agent
-        image: kajov/wazuh-installer:2.0.0
-        #command: ["/bin/ash","-c","sleep 1000m"]
-        env:
-        - name: NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        - name: W_MANAGER
-          value: CHANGEME
-        resources:
-          limits:
-            memory: 1000Mi
-          requests:
-            cpu: 100m
-            memory: 500Mi
-        volumeMounts:
-        - name: varlog
-          mountPath: /var/log
-        - name: ossec-conf
-          mountPath: /var/ossec/etc/ossec.conf
-          subPath: ossec.conf
-      terminationGracePeriodSeconds: 1
-      volumes:
-      - name: varlog
-        hostPath:
-          path: /var/log
-      - name: ossec-conf
-        configMap:
-          name: ossec-conf
-      serviceAccount: wazuh-agent
-      serviceAccountName: wazuh-agent
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ossec-conf
-  namespace: wazuh-agent
-data:
-  ossec.conf: |-
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: wazuh-agent
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: wazuh-agent
-  namespace: wazuh-agent
-spec:
-  selector:
-    matchLabels:
-      name: wazuh-agent
-  template:
-    metadata:
-      labels:
-        name: wazuh-agent
-    spec:
-      tolerations:
-      - key: node-role.kubernetes.io/master
-        effect: NoSchedule
-      containers:
-      - name: wazuh-agent
-        image: kajov/wazuh-agent-installer
-        #command: ["/bin/ash","-c","sleep 1000m"]
-        env:
-        - name: NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        - name: W_MANAGER
-          value: CHANGEME
-        resources:
-          limits:
-            memory: 1000Mi
-          requests:
-            cpu: 100m
-            memory: 500Mi
-        volumeMounts:
-        - name: varlog
-          mountPath: /var/log
-        - name: ossec-conf
-          mountPath: /var/ossec/etc/ossec.conf
-          subPath: ossec.conf
-      terminationGracePeriodSeconds: 1
-      volumes:
-      - name: varlog
-        hostPath:
-          path: /var/log
-      - name: ossec-conf
-        configMap:
-          name: ossec-conf
-      serviceAccount: wazuh-agent
-      serviceAccountName: wazuh-agent
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: ossec-conf
-  namespace: wazuh-agent
+  namespace: wazuh
 data:
   ossec.conf: |-
     <!--
-      Wazuh - Agent - Default configuration for ubuntu 18.04
+      Wazuh - Agent - Default configuration for ubuntu 20.04
       More info at: https://documentation.wazuh.com
       Mailing list: https://groups.google.com/forum/#!forum/wazuh
     -->
@@ -135,11 +14,11 @@ data:
     <ossec_config>
       <client>
         <server>
-          <address>CHANGEME</address>
+          <address>WORKER_NODE_LOAD_BALANCER_URL/IP</address>
           <port>1514</port>
           <protocol>tcp</protocol>
         </server>
-        <config-profile>ubuntu, ubuntu20, ubuntu20.04, ubuntu16, ubuntu16.04, centos, windows</config-profile>
+        <config-profile>ubuntu, ubuntu20, ubuntu20.04, ubuntu16, ubuntu16.04</config-profile>
         <notify_time>10</notify_time>
         <time-reconnect>10</time-reconnect>
         <auto_restart>yes</auto_restart>
@@ -230,7 +109,7 @@ data:
       <!-- Virustotal inegration -->
       <integration>
         <name>virustotal</name>
-        <api_key>CHANGEME</api_key> <!-- Replace with your VirusTotal API key -->
+        <api_key>VIRUS_TOTAL_API/api_key> <!-- Replace with your VirusTotal API key -->
         <group>syscheck</group>
         <alert_format>json</alert_format>
       </integration>
@@ -390,63 +269,3 @@ data:
       </logging>
   
     </ossec_config>
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: wazuh-agent
-  namespace: wazuh-agent
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: role-wazuh-agent
-  namespace: wazuh-agent
-rules:
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["get", "create", "update"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: rolebinding-wazuh-agent
-  namespace: wazuh-agent
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: role-wazuh-agent
-subjects:
-  - kind: ServiceAccount
-    name: wazuh-agent
-    namespace: wazuh-agent
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: wazuh-agent
-  namespace: wazuh-agent
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: role-wazuh-agent
-  namespace: wazuh-agent
-rules:
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["get", "create", "update"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: rolebinding-wazuh-agent
-  namespace: wazuh-agent
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: role-wazuh-agent
-subjects:
-  - kind: ServiceAccount
-    name: wazuh-agent
-    namespace: wazuh-agent
